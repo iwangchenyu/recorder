@@ -1,87 +1,81 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>录制MP3音频</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>在线录制MP3音频工具</title>
+<meta name="description" content="在线调用麦克风录制音频并导出为 MP3，可即时试听与下载，纯浏览器本地录音，不上传服务器。" />
+<style>
+:root{--primary:#5b6cff;--primary-d:#4a5bf0;--bg:#eef1f7;--card:#fff;--text:#1f2430;--muted:#6b7280;--border:#e2e6ee;--soft:#f4f6fb}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:720px;margin:0 auto;padding:28px 18px 60px}
+header{text-align:center;margin-bottom:22px}
+header h1{font-size:26px;margin:0 0 6px}
+header p{color:var(--muted);margin:0;font-size:15px}
+.card{background:var(--card);border-radius:14px;box-shadow:0 6px 24px rgba(30,41,59,.07);padding:22px;margin-bottom:18px;text-align:center}
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:10px;padding:10px 20px;font-size:15px;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-d)}
+.btn-ghost{background:#fff;color:var(--text);border:1px solid var(--border)}
+#recordingslist{text-align:left;margin-top:14px}
+#recordingslist>div{background:var(--soft);border-radius:10px;padding:12px;margin-bottom:10px}
+#recordingslist audio{width:100%;margin-top:6px}
+.hint{color:var(--muted);font-size:13.5px;margin-top:12px}
+footer{text-align:center;color:var(--muted);font-size:13px;margin-top:24px}
+footer a{color:var(--primary);text-decoration:none}
+</style>
 </head>
 <body>
-    <h1>录制MP3</h1>
-    <button onclick="funStart(this);" id="btnStart" disabled>录制</button>
-    <button onclick="funStop(this);" id="btnStop" disabled>停止</button>
-    <!-- <button onclick="funUpload(this);" id="btnUpload" disabled>上传</button> -->
-    <h4>调试信息：</h4>
-    <div id="recordingslist"></div>
-    <script src="js/recordmp3.js"></script>
-    <script>
-        var recorder = new MP3Recorder({
-            debug:true,
-            funOk: function () {
-                btnStart.disabled = false;
-                log('初始化成功');
-            },
-            funCancel: function (msg) {
-                log(msg);
-                recorder = null;
-            }
-        });
-        var mp3Blob;
+<div class="wrap">
+<header><h1>在线录制 MP3 音频</h1><p>调用麦克风录音，导出 MP3 后可试听下载，全部本地处理</p></header>
+<div class="card">
+  <button class="btn btn-primary" onclick="funStart(this);" id="btnStart" disabled>开始录制</button>
+  <button class="btn btn-ghost" onclick="funStop(this);" id="btnStop" disabled>停止并导出</button>
+  <p class="hint" id="status">正在初始化录音模块，请稍候…</p>
+</div>
+<div class="card">
+  <div id="recordingslist"></div>
+</div>
+<footer>作者：王尘宇 · <a href="https://wangchenyu.com">wangchenyu.com</a> · <a href="https://gitee.com/iseeyu">Gitee</a></footer>
+</div>
+<script src="js/recordmp3.js"></script>
+<script>
+var recorder = new MP3Recorder({
+    debug:false,
+    funOk: function () { btnStart.disabled = false; log('初始化成功，可以开始录音'); },
+    funCancel: function (msg) { log(msg); recorder = null; }
+});
+var mp3Blob;
 
-
-        function funStart(button) {
-            btnStart.disabled = true;
-            btnStop.disabled = false;
-            btnUpload.disabled = true;
-            log('录音开始...');
-            recorder.start();
-        }
-
-        function funStop(button) {
-            recorder.stop();
-            btnStart.disabled = false;
-            btnStop.disabled = true;
-            btnUpload.disabled = false;
-            log('录音结束，MP3导出中...');
-            recorder.getMp3Blob(function (blob) {
-                log('MP3导出成功');
-
-                mp3Blob = blob;
-                var url = URL.createObjectURL(mp3Blob);
-                var div = document.createElement('div');
-                var au = document.createElement('audio');
-                var hf = document.createElement('a');
-
-                au.controls = true;
-                au.src = url;
-                hf.href = url;
-                hf.download = new Date().toISOString() + '.mp3';
-                hf.innerHTML = hf.download;
-                div.appendChild(au);
-                div.appendChild(hf);
-                recordingslist.appendChild(div);
-            });
-        }
-
-        function log(str) {
-            recordingslist.innerHTML += str + '<br/>';
-        }
-
-        function funUpload() {
-            var fd = new FormData();
-            var mp3Name = encodeURIComponent('audio_recording_' + new Date().getTime() + '.mp3');
-            fd.append('mp3Name', mp3Name);
-            fd.append('file', mp3Blob);
-
-            var xhr = new XMLHttpRequest();
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState == 4 && xhr.status == 200) {
-                    recordingslist.innerHTML += '上传成功：<a href="' + xhr.responseText + '" target="_blank">' + mp3Name + '</a>';
-                }
-            };
-            xhr.open('POST', 'upload.php');
-            xhr.send(fd);
-        }
-    </script>
+function funStart(button) {
+    btnStart.disabled = true;
+    btnStop.disabled = false;
+    log('录音开始...');
+    recorder.start();
+}
+function funStop(button) {
+    recorder.stop();
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+    log('录音结束，MP3 导出中...');
+    recorder.getMp3Blob(function (blob) {
+        log('MP3 导出成功');
+        mp3Blob = blob;
+        var url = URL.createObjectURL(mp3Blob);
+        var div = document.createElement('div');
+        var au = document.createElement('audio');
+        var hf = document.createElement('a');
+        au.controls = true; au.src = url;
+        hf.href = url; hf.download = new Date().toISOString() + '.mp3';
+        hf.innerHTML = '下载 ' + hf.download;
+        div.appendChild(au); div.appendChild(hf);
+        recordingslist.appendChild(div);
+    });
+}
+function log(str) {
+    document.getElementById('status').textContent = str;
+    recordingslist.innerHTML += '<div>' + str + '</div>';
+}
+</script>
 </body>
 </html>
